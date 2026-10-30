@@ -1,0 +1,98 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag to publish, e.g. v1.0.1 (leave empty to only build)"
+        required: false
+        type: string
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses > /dev/null || true
+
+      - name: Restore signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.HUBTOOLS_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/hubtools.p12"
+            echo "KEYSTORE_PATH=$RUNNER_TEMP/hubtools.p12" >> "$GITHUB_ENV"
+          else
+            echo "No signing key secret found. Using a temporary key, so this APK cannot update an installed app."
+          fi
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Build APK
+        working-directory: android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.HUBTOOLS_KEY_PASSWORD }}
+        run: gradle assembleRelease --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HubTools-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
+
+  pc:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build the Windows program
+        run: |
+          pip install pyinstaller
+          pyinstaller --onefile --name HubTools-PC --paths pc pc/server.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HubTools-PC
+          path: dist/HubTools-PC.exe
+
+  release:
+    needs: [android, pc]
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ github.event.inputs.version }}
+          KEYSTORE_B64: ${{ secrets.HUBTOOLS_KEYSTORE_B64 }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "Signing key missing: refusing to publish an APK that could not update installed apps."
+            exit 1
+          fi
+          cp artifacts/HubTools-apk/app-release.apk "HubTools-$VERSION.apk"
+          cp artifacts/HubTools-PC/HubTools-PC.exe HubTools-PC.exe
+          gh release create "$VERSION" "HubTools-$VERSION.apk" HubTools-PC.exe \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "HubTools $VERSION" --generate-notes
