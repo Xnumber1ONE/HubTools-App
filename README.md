@@ -4,7 +4,7 @@ See your Steam playtime and achievements on your Android phone.
 A small program on your Windows PC reads Steam's local files and shares them with the app over your home Wi-Fi.
 Nothing is uploaded anywhere, and no account is needed.
 
-## Setup (3 steps, 2 minutes)
+## Setup
 1. **Phone:** download `HubTools-vX.apk` from [Releases](../../releases) and install it.
 2. **PC:** download `HubTools-PC.exe` from the same page and run it. A window shows a 6-digit code.
    If Windows asks about the firewall, tick **Private networks** and click Allow.
@@ -29,12 +29,3 @@ Instead of the home Wi-Fi, the app can read your data from a private GitHub repo
 
 ## Privacy
 The PC program only answers phones that know the code. Traffic stays on your home network.
-
-## Maintainers: publishing a release
-One-time signing key, so updates install over old versions:
-1. `pip install cryptography`, then `python pc/make_keystore.py`.
-2. Add repo secrets `HUBTOOLS_KEYSTORE_B64` (text of `hubtools.p12.b64.txt`) and `HUBTOOLS_KEY_PASSWORD`.
-3. Back up `hubtools.p12` and the password. Never commit them.
-
-To release: Actions > Release > Run workflow > type a version like `v1.0.1`.
-The signed APK and `HubTools-PC.exe` appear under Releases.
