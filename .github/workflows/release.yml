@@ -63,9 +63,15 @@ jobs:
           python-version: "3.12"
 
       - name: Build the Windows program
+        shell: pwsh
+        env:
+          VERSION: ${{ github.event.inputs.version }}
         run: |
           pip install pyinstaller
-          pyinstaller --onefile --name HubTools-PC --paths pc pc/server.py
+          python pc/make_version_info.py "$env:VERSION"
+          $opts = @("--onefile", "--name", "HubTools-PC", "--paths", "pc", "--version-file", "pc/version_info.txt")
+          if (Test-Path "pc/hubtools.ico") { $opts += @("--icon", "pc/hubtools.ico") }
+          pyinstaller @opts pc/server.py
 
       - uses: actions/upload-artifact@v4
         with:
