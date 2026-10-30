@@ -224,6 +224,12 @@ def main():
         input(f"{e}\nPress Enter to close.")
         return
 
+    if os.name == "nt":
+        try:
+            ctypes.windll.kernel32.SetConsoleTitleW("HubTools PC")
+        except Exception:
+            pass
+
     c = IDENT["code"]
     print("HubTools PC is running.\n")
     print(f"    Your code:  {c[:3]} {c[3:]}\n")
