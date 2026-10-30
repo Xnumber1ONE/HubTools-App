@@ -1,17 +1,12 @@
-#!/usr/bin/env python3
-"""Writes pc/version_info.txt: the "Details" tab of HubTools-PC.exe (right click > Properties).
-Usage: python pc/make_version_info.py v1.0.1
-Edit the texts below to change what Windows shows.
-"""
 import re
 import sys
 from pathlib import Path
 
 PRODUCT = "HubTools"
-COMPANY = "HubTools"
+COMPANY = "Xnumber1ONE"
 DESCRIPTION = "HubTools PC - shares your Steam playtime and achievements with your phone"
 COPYRIGHT = "Copyright (c) 2026 HubTools"
-EXE_NAME = "HubTools-PC.exe"
+EXE_NAME = "HubTools.exe"
 
 
 def parts(version: str):
