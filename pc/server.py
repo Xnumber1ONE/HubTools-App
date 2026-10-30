@@ -10,6 +10,7 @@ import json
 import os
 import secrets
 import socket
+import subprocess
 import sys
 import threading
 import time
@@ -140,6 +141,49 @@ def local_ip():
         return "your PC's IP"
 
 
+def firewall_rule_exists():
+    """True when Windows already has our allow rule (for the current program path when packaged)."""
+    try:
+        r = subprocess.run(["netsh", "advfirewall", "firewall", "show", "rule", "name=HubTools PC", "verbose"],
+                           capture_output=True, text=True, creationflags=0x08000000)
+        if r.returncode != 0:
+            return False
+        if getattr(sys, "frozen", False):
+            return sys.executable.lower() in r.stdout.lower()
+        return True
+    except Exception:
+        return True  # cannot check, do not nag
+
+
+def ensure_firewall():
+    """Windows silently blocks incoming connections on "Public" networks (common on Ethernet) and when the
+    allow prompt was dismissed. Add our own rule for every network type. Windows asks for permission once."""
+    if os.name != "nt" or firewall_rule_exists():
+        return
+    print("Windows will ask for permission once, so your phone can reach this PC. Please click Yes.\n")
+    if getattr(sys, "frozen", False):
+        prog = sys.executable
+        cmds = [
+            f'netsh advfirewall firewall delete rule name=all program="{prog}"',
+            f'netsh advfirewall firewall add rule name="HubTools PC" dir=in action=allow program="{prog}" profile=any',
+        ]
+    else:
+        cmds = [
+            f'netsh advfirewall firewall add rule name="HubTools PC" dir=in action=allow protocol=TCP localport={HTTP_PORT} profile=any',
+            f'netsh advfirewall firewall add rule name="HubTools PC discovery" dir=in action=allow protocol=UDP localport={DISCOVERY_PORT} profile=any',
+        ]
+    try:
+        ctypes.windll.shell32.ShellExecuteW(None, "runas", "cmd.exe", "/c " + " & ".join(cmds), None, 0)
+    except Exception:
+        pass
+    for _ in range(40):
+        time.sleep(1)
+        if firewall_rule_exists():
+            print("Done. Your phone can now reach this PC.\n")
+            return
+    print("Permission was not given. If the app cannot find this PC, restart the program and click Yes.\n")
+
+
 def set_startup(enable):
     import winreg
     key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run",
@@ -187,7 +231,6 @@ def main():
     print('  2. Tap "Find my PC" and pick this PC.')
     print("  3. Type the code above. You only do this once.\n")
     print(f"  Manual address if needed: {local_ip()}")
-    print('  If Windows asks about the firewall, tick "Private networks" and click Allow.')
     print("  Keep this window open (you can minimize it).\n")
     if args.background:
         try:
@@ -195,6 +238,7 @@ def main():
         except Exception:
             pass
     else:
+        ensure_firewall()
         ask_startup()
 
     threading.Thread(target=discovery, daemon=True).start()
