@@ -97,7 +97,7 @@ jobs:
             echo "Signing key missing: refusing to publish an APK that could not update installed apps."
             exit 1
           fi
-          cp artifacts/HubTools-apk/app-release.apk "HubTools-$VERSION.apk"
+          cp artifacts/HubTools-apk/app-release.apk "HubTools.apk"
           (cd artifacts && zip -qr ../HubTools-PC.zip HubTools-PC)
           gh release create "$VERSION" "HubTools.apk" HubTools-PC.zip \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
