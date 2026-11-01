@@ -99,6 +99,6 @@ jobs:
           fi
           cp artifacts/HubTools-apk/app-release.apk "HubTools-$VERSION.apk"
           (cd artifacts && zip -qr ../HubTools-PC.zip HubTools-PC)
-          gh release create "$VERSION" "HubTools-$VERSION.apk" HubTools-PC.zip \
+          gh release create "$VERSION" "HubTools.apk" HubTools-PC.zip \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
             --title "HubTools $VERSION" --generate-notes
