@@ -67,16 +67,16 @@ jobs:
         env:
           VERSION: ${{ github.event.inputs.version }}
         run: |
-          pip install pyinstaller
+          pip install pyinstaller pystray pillow
           python pc/make_version_info.py "$env:VERSION"
-          $opts = @("--onefile", "--name", "HubTools-PC", "--paths", "pc", "--version-file", "pc/version_info.txt")
-          if (Test-Path "pc/hubtools.ico") { $opts += @("--icon", "pc/hubtools.ico") }
+          $opts = @("--onedir", "--windowed", "--name", "HubTools-PC", "--paths", "pc", "--version-file", "pc/version_info.txt")
+          if (Test-Path "pc/hubtools.ico") { $opts += @("--icon", "pc/hubtools.ico", "--add-data", "pc/hubtools.ico;.") }
           pyinstaller @opts pc/server.py
 
       - uses: actions/upload-artifact@v4
         with:
           name: HubTools-PC
-          path: dist/HubTools-PC.exe
+          path: dist/HubTools-PC
 
   release:
     needs: [android, pc]
@@ -98,7 +98,7 @@ jobs:
             exit 1
           fi
           cp artifacts/HubTools-apk/app-release.apk "HubTools-$VERSION.apk"
-          cp artifacts/HubTools-PC/HubTools-PC.exe HubTools-PC.exe
-          gh release create "$VERSION" "HubTools-$VERSION.apk" HubTools-PC.exe \
+          (cd artifacts && zip -qr ../HubTools-PC.zip HubTools-PC)
+          gh release create "$VERSION" "HubTools-$VERSION.apk" HubTools-PC.zip \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
             --title "HubTools $VERSION" --generate-notes
